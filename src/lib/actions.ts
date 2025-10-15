@@ -1,21 +1,31 @@
 'use server';
 
-import { ai } from '@/ai/genkit';
-import { parseAndHighlightUncertainFields, type ParsedPosition } from '@/ai/flows/highlight-uncertain-fields-in-preview';
+import type { ParsedPosition } from '@/lib/definitions';
 import { revalidatePath } from 'next/cache';
 import { savePool as mockSavePool } from '@/lib/data';
 
-async function ocrWithGenAI(imageDataUri: string): Promise<string> {
-    const model = ai.getModel('googleai/gemini-2.5-flash');
-    const result = await model.generate({
-        input: [
-            { text: 'Extract all text content from the following image. Only return the extracted text, preserving line breaks and structure as much as possible.' },
-            { media: { url: imageDataUri } }
-        ]
-    });
-    const textPart = result.candidates[0].message.parts.find(p => !!p.text);
-    return textPart?.text ?? '';
+// This is a simplified parser, you can enhance it with more complex regex or logic
+function parseRawText(rawText: string): ParsedPosition {
+    const lines = rawText.split('\n').map(line => line.trim()).filter(line => line);
+    const data: Partial<ParsedPosition> = {};
+
+    // Example parsing logic, this can be greatly improved
+    const pairMatch = lines.find(l => l.includes('/'))?.match(/(\S+)\s*\/\s*(\S+)/);
+    if(pairMatch) {
+        data.pair_base = pairMatch[1];
+        data.pair_quote = pairMatch[2];
+    }
+    
+    // This is a very basic example. A real implementation would need more robust parsing.
+    // For now, we'll just pass what we have.
+    
+    return {
+        ...data,
+        uncertainFields: [],
+        captured_at: new Date().toISOString()
+    } as ParsedPosition;
 }
+
 
 export async function processLpInput(prevState: any, formData: FormData): Promise<{data: ParsedPosition | null; error: string | null}> {
     const text = formData.get('text') as string;
@@ -27,24 +37,19 @@ export async function processLpInput(prevState: any, formData: FormData): Promis
         if (text) {
             rawText = text;
         } else if (imageFile && imageFile.size > 0) {
-            const imageBuffer = await imageFile.arrayBuffer();
-            const imageBase64 = Buffer.from(imageBuffer).toString('base64');
-            const imageDataUri = `data:${imageFile.type};base64,${imageBase64}`;
-            rawText = await ocrWithGenAI(imageDataUri);
-
-            if (!rawText) {
-                return { data: null, error: 'Could not extract text from image. The image might be unclear or empty.' };
-            }
+           return { data: null, error: 'A extração de imagem foi desativada. Por favor, cole o texto manualmente.' };
         } else {
-            return { data: null, error: 'No input provided. Please paste text or upload an image.' };
+            return { data: null, error: 'Nenhuma entrada fornecida. Por favor, cole o texto.' };
         }
         
-        const parsedData = await parseAndHighlightUncertainFields({ rawText });
+        const parsedData = parseRawText(rawText);
+        parsedData.uncertainFields = Object.keys(parsedData).filter(k => !parsedData[k]);
+
         return { data: parsedData, error: null };
 
     } catch (error) {
         console.error(error);
-        return { data: null, error: 'An unexpected error occurred during processing. Please try again.'};
+        return { data: null, error: 'Ocorreu um erro inesperado durante o processamento. Por favor, tente novamente.'};
     }
 }
 
