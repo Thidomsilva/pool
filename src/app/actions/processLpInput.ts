@@ -1,12 +1,8 @@
 'use server';
 
 import type { ParsedPosition } from '@/lib/definitions';
-import { revalidatePath } from 'next/cache';
-import { savePool as mockSavePool } from '@/lib/data';
 
-// This is a simplified parser, you can enhance it with more complex regex or logic
 function parseRawText(rawText: string): ParsedPosition {
-    // Normalização básica
     let t = rawText.replace(/\r/g, '\n');
     t = t.replace(/\n{2,}/g, '\n');
     t = t.replace(/mil/g, '000');
@@ -26,43 +22,28 @@ function parseRawText(rawText: string): ParsedPosition {
     };
 
     const out: any = {};
-    // Par de tokens
     const pairMatch = t.match(/([A-Z0-9]+)\s*\/\s*([A-Z0-9]+)/);
     if (pairMatch) {
         out.pair_base = pairMatch[1];
         out.pair_quote = pairMatch[2];
     }
-    // Versão
     out.version = grab(/v(\d+)/) ? `v${grab(/v(\d+)/)}` : undefined;
-    // Fee
     out.fee_bps = toNum(grab(/([0-9.]+)\s*$/m));
-    // Rede
     out.network = grab(/(Arbitrum|Base|Ethereum|Optimism|Polygon|Unichain)/);
-    // Dentro do intervalo
     out.in_range = /Dentro do intervalo/i.test(t);
-    // APR recompensa
     out.reward_apr_pct = toNum(grab(/APR da recompensa de ([0-9.]+)/i));
-    // Preço mínimo
     out.price_min = toNum(grab(/Preço mínimo\s*([0-9.]+)/i));
-    // Preço máximo
     out.price_max = toNum(grab(/Preço máximo\s*([0-9.]+)/i));
-    // Preço de mercado
     out.price_market = toNum(grab(/Preço de mercado\s*([0-9.]+)/i));
-    // Tarifas recebidas
     out.fees_total_usd = toNum(grab(/Tarifas recebidas\s*([0-9.]+)/i));
-    // APR total
     out.apr_total_pct = toNum(grab(/APR total\s*([0-9.]+)/i));
-    // Rentabilidade anual do pool
     out.pool_apr_pct = toNum(grab(/Rentabilidade anual do pool\s*([0-9.]+)/i));
-    // Valor da posição (se disponível)
     out.position_usd = toNum(grab(/Posição\s*([0-9.]+)/i));
 
-    // Marcar campos não preenchidos como "uncertain"
     out.uncertainFields = Object.keys(out).filter(k => out[k] === undefined || out[k] === null);
     out.captured_at = new Date().toISOString();
     return out as ParsedPosition;
 }
-
 
 export async function processLpInput(prevState: any, formData: FormData): Promise<{data: ParsedPosition | null; error: string | null}> {
     const text = formData.get('text') as string;
@@ -78,26 +59,11 @@ export async function processLpInput(prevState: any, formData: FormData): Promis
         } else {
             return { data: null, error: 'Nenhuma entrada fornecida. Por favor, cole o texto.' };
         }
-        
         const parsedData = parseRawText(rawText);
         parsedData.uncertainFields = Object.keys(parsedData).filter(k => !parsedData[k]);
-
         return { data: parsedData, error: null };
-
     } catch (error) {
         console.error(error);
         return { data: null, error: 'Ocorreu um erro inesperado durante o processamento. Por favor, tente novamente.'};
-    }
-}
-
-
-export async function savePoolAction(prevState: any, formData: FormData) {
-    try {
-        const data = JSON.parse(formData.get('data') as string);
-        await mockSavePool(data);
-        revalidatePath('/dashboard');
-        return { success: true, message: 'Pool saved successfully!' };
-    } catch (e) {
-        return { success: false, message: 'Failed to save pool.' };
     }
 }

@@ -3,7 +3,7 @@
 import { useActionState } from 'react';
 import { DataImporter } from './data-importer';
 import { PoolForm } from './pool-form';
-import { processLpInput } from '@/lib/actions';
+import { processLpInput } from '@/app/actions/processLpInput';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle } from 'lucide-react';
