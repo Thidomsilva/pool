@@ -1,18 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import type { DashboardData, Pool } from '@/lib/definitions';
-import {
-  PlusCircle,
-  Calendar,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react';
+import type { DashboardData } from '@/lib/definitions';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import MonthlyProfit from './monthly-profit';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import PoolCard from './pool-card';
+import { PlusCircle, Trophy, TrendingUp, Gem, ArrowUpDown } from 'lucide-react';
+import MetricCards from './metric-cards';
+import HighlightCard from './highlight-card';
 
 export default function DashboardClient({
   initialData,
@@ -20,8 +14,7 @@ export default function DashboardClient({
   initialData: DashboardData;
 }) {
   const router = useRouter();
-  const { pools, summaryMetrics, monthlyPerformance } = initialData;
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const { pools, summaryMetrics, monthlyPerformance, bestPool, highestRoiPool, highestFeesPool } = initialData;
 
   const handleNewPool = () => {
     router.push('/pools/new');
@@ -30,59 +23,61 @@ export default function DashboardClient({
   const activePools = pools.filter((pool) => pool.status === 'Ativa');
   const closedPools = pools.filter((pool) => pool.status === 'Fechada');
 
-  const handleMonthChange = (amount: number) => {
-    setCurrentDate(prev => {
-        const newDate = new Date(prev);
-        newDate.setMonth(newDate.getMonth() + amount);
-        return newDate;
-    });
-  }
-
-  const formattedDate = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(currentDate);
-
-
   return (
-    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
-        <Button onClick={handleNewPool} size="sm">
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Nova Pool
-        </Button>
-      </div>
+    <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
+        <MetricCards 
+            activePoolsCount={activePools.length}
+            totalValue={summaryMetrics.totalValue}
+            totalProfitLoss={summaryMetrics.totalProfitLoss}
+            totalProfitLossPct={summaryMetrics.totalProfitLossPct}
+        />
 
-      <MonthlyProfit 
-        poolsCount={activePools.length}
-        totalFees={summaryMetrics.totalFees}
-        totalProfitLoss={summaryMetrics.totalProfitLoss}
-        totalRoi={summaryMetrics.bestRoi.value}
-      />
+        {bestPool && (
+            <HighlightCard 
+                pool={bestPool}
+                title="Melhor Pool"
+                icon={<Trophy className="w-5 h-5 text-yellow-500"/>}
+                metricLabel="Rendimento"
+                metricValue={bestPool.profit_loss_pct}
+                variant="yellow"
+            />
+        )}
 
-      <div>
-        <h3 className="text-xl font-bold">Pools</h3>
-        <Tabs defaultValue="active" className="mt-4">
-          <TabsList>
-            <TabsTrigger value="active">Pools Ativas ({activePools.length})</TabsTrigger>
-            <TabsTrigger value="closed">Pools Fechadas ({closedPools.length})</TabsTrigger>
-          </TabsList>
-          <TabsContent value="active" className="mt-4 space-y-4">
-            {activePools.map((pool) => (
-              <PoolCard key={pool.id} pool={pool} />
-            ))}
-             {activePools.length === 0 && (
-                <p className="text-muted-foreground text-center py-8">Nenhuma pool ativa encontrada.</p>
-             )}
-          </TabsContent>
-          <TabsContent value="closed" className="mt-4 space-y-4">
-            {closedPools.map((pool) => (
-              <PoolCard key={pool.id} pool={pool} />
-            ))}
-            {closedPools.length === 0 && (
-                <p className="text-muted-foreground text-center py-8">Nenhuma pool fechada encontrada.</p>
-             )}
-          </TabsContent>
-        </Tabs>
-      </div>
+        {highestRoiPool && (
+            <HighlightCard 
+                pool={highestRoiPool}
+                title="Maior ROI"
+                icon={<TrendingUp className="w-5 h-5 text-purple-500"/>}
+                metricLabel="ROI"
+                metricValue={highestRoiPool.roi_pct}
+                variant="purple"
+            />
+        )}
+
+        {highestFeesPool && (
+             <HighlightCard 
+                pool={highestFeesPool}
+                title="Maiores Taxas"
+                icon={<Gem className="w-5 h-5 text-blue-500"/>}
+                metricLabel="Taxas Coletadas"
+                metricValue={highestFeesPool.total_fees_usd}
+                variant="blue"
+                isCurrency
+            />
+        )}
+        
+        <MonthlyProfit 
+            poolsCount={activePools.length}
+            totalFees={summaryMetrics.totalFees}
+            totalProfitLoss={summaryMetrics.totalProfitLoss}
+        />
+
+        <div className="fixed bottom-6 right-6">
+            <Button onClick={handleNewPool} size="lg" className="rounded-full w-16 h-16 shadow-lg">
+                <PlusCircle className="h-8 w-8" />
+                <span className="sr-only">Nova Pool</span>
+            </Button>
+        </div>
     </div>
   );
 }

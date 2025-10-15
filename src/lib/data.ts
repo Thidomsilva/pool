@@ -2,8 +2,21 @@
 
 import { db } from '@/firebase/server';
 import type { DashboardData, Pool, PoolForm, PoolSnapshot } from './definitions';
-import { differenceInDays, parseISO } from 'date-fns';
-import { collection, addDoc, getDocs, Timestamp, query, orderBy } from 'firebase/firestore';
+import { differenceInDays } from 'date-fns';
+import { collection, addDoc, getDocs, Timestamp, query, orderBy, DocumentData } from 'firebase/firestore';
+
+function docToPool(doc: DocumentData): Pool {
+    const data = doc.data();
+    const pool: Pool = {
+        id: doc.id,
+        ...data,
+        entry_date: data.entry_date,
+        exit_date: data.exit_date,
+        created_at: data.created_at,
+        snapshots: data.snapshots || [],
+    } as Pool;
+    return calculatePoolMetrics(pool);
+}
 
 function calculatePoolMetrics(pool: Pool): Pool {
     const initial_usd = pool.initial_usd;
@@ -18,7 +31,9 @@ function calculatePoolMetrics(pool: Pool): Pool {
     const entryDate = (pool.entry_date as Timestamp).toDate();
     const duration_days = differenceInDays(endDate, entryDate);
     
-    const in_range = pool.status === 'Ativa'; // This is a simplistic check. Real logic may differ.
+    // This is a simplistic check. Real logic may differ.
+    // A better check would be if current price is between range_min and range_max
+    const in_range = pool.status === 'Ativa'; 
     
     return {
         ...pool,
@@ -27,27 +42,42 @@ function calculatePoolMetrics(pool: Pool): Pool {
         roi_pct,
         duration_days,
         in_range,
-        resultado: profit_loss_usd // Added for the new card
+        resultado: profit_loss_usd
     };
 }
 
 export async function getDashboardData(): Promise<DashboardData> {
   const pools = await getPools();
 
+  let bestPool: Pool | undefined = undefined;
+  let highestRoiPool: Pool | undefined = undefined;
+  let highestFeesPool: Pool | undefined = undefined;
+
   const summaryMetrics = pools.reduce(
     (acc, pool) => {
       acc.totalValue += pool.current_usd;
       acc.totalProfitLoss += pool.profit_loss_usd;
       acc.totalFees += pool.total_fees_usd;
-      if (pool.roi_pct > acc.bestRoi.value) {
-        acc.bestRoi = { name: pool.name, value: pool.roi_pct };
+      
+      if (!bestPool || pool.profit_loss_pct > bestPool.profit_loss_pct) {
+        bestPool = pool;
       }
+      if (!highestRoiPool || pool.roi_pct > highestRoiPool.roi_pct) {
+        highestRoiPool = pool;
+      }
+      if (!highestFeesPool || pool.total_fees_usd > highestFeesPool.total_fees_usd) {
+        highestFeesPool = pool;
+      }
+
       return acc;
     },
-    { totalValue: 0, totalProfitLoss: 0, bestRoi: { name: '', value: -Infinity }, totalFees: 0 }
+    { totalValue: 0, totalProfitLoss: 0, totalFees: 0 }
   );
 
-  // Mock monthly performance until we have snapshots
+  const totalInitialValue = pools.reduce((acc, p) => acc + p.initial_usd, 0);
+  const totalProfitLossPct = totalInitialValue > 0 ? (summaryMetrics.totalProfitLoss / totalInitialValue) * 100 : 0;
+
+
   const monthlyPerformance = [
     { month: 'Aug 2023', profit: 0, fees: 0 },
     { month: 'Sep 2023', profit: 0, fees: 0 },
@@ -57,8 +87,15 @@ export async function getDashboardData(): Promise<DashboardData> {
 
   return {
     pools,
-    summaryMetrics,
+    summaryMetrics: {
+        ...summaryMetrics,
+        totalProfitLossPct,
+        bestRoi: { name: 'Deprecated', value: 0} // to be removed
+    },
     monthlyPerformance,
+    bestPool,
+    highestRoiPool,
+    highestFeesPool
   };
 }
 
@@ -70,18 +107,7 @@ export async function getPools(): Promise<Pool[]> {
     const poolsCol = collection(db, 'pools');
     const q = query(poolsCol, orderBy('created_at', 'desc'));
     const poolSnapshot = await getDocs(q);
-    const poolList = poolSnapshot.docs.map(doc => {
-        const data = doc.data();
-        const pool: Pool = {
-            id: doc.id,
-            ...data,
-            entry_date: data.entry_date,
-            exit_date: data.exit_date,
-            created_at: data.created_at,
-            snapshots: data.snapshots || [],
-        } as Pool;
-        return calculatePoolMetrics(pool);
-    });
+    const poolList = poolSnapshot.docs.map(doc => docToPool(doc));
     return poolList;
 }
 
@@ -107,7 +133,6 @@ export async function savePool(poolData: PoolForm) {
         range_max: poolData.range_max,
         total_fees_usd: poolData.total_fees_usd,
         created_at: now,
-        // In a real app, pool_tokens would be saved to a separate subcollection.
         tokens: poolData.tokens, 
     };
 

@@ -66,8 +66,12 @@ export interface DashboardData {
   summaryMetrics: {
     totalValue: number;
     totalProfitLoss: number;
+    totalProfitLossPct: number;
     bestRoi: { name: string; value: number };
     totalFees: number;
   };
   monthlyPerformance: { month: string; profit: number; fees: number }[];
+  bestPool?: Pool;
+  highestRoiPool?: Pool;
+  highestFeesPool?: Pool;
 }

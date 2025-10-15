@@ -1,3 +1,5 @@
+'use server';
+
 import { getDashboardData } from '@/lib/data';
 import DashboardClient from '@/components/app/dashboard/dashboard-client';
 
