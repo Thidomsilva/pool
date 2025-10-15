@@ -1,52 +1,57 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { savePool as mockSavePool } from '@/lib/data';
+import { savePool } from '@/lib/data';
+import { z } from 'zod';
 
-// This is a simplified parser, you can enhance it with more complex regex or logic
-function normalizeNumber(input: string | number | undefined | null): number {
-    if (input === undefined || input === null) return 0;
-    if (typeof input === 'number') return input;
-    
-    // Remove thousand separators, then replace comma with dot for decimal
-    const normalized = input.replace(/\./g, '').replace(',', '.');
-    const number = parseFloat(normalized);
-    return isNaN(number) ? 0 : number;
-}
+const FormSchema = z
+  .object({
+    name: z.string().min(1, { message: 'Pool Name is required.' }),
+    exchange: z.string().min(1, { message: 'Exchange is required.' }),
+    network: z.string().min(1, { message: 'Network is required.' }),
+    entry_date: z.coerce.date({ required_error: 'Entry Date is required.' }),
+    exit_date: z.coerce.date().optional(),
+    status: z.enum(['Ativa', 'Fechada']).default('Ativa'),
+    tokens: z.array(
+      z.object({
+        symbol: z.string().min(1, 'Symbol is required.'),
+        qty: z.coerce.number().positive('Quantity must be positive.'),
+        usd_value: z.coerce.number().positive('Value must be positive.'),
+      })
+    ).min(1, 'At least one token is required.'),
+    initial_usd: z.coerce.number().positive('Initial Value must be positive.'),
+    current_usd: z.coerce.number().nonnegative('Current Value must be non-negative.'),
+    range_min: z.coerce.number().optional(),
+    range_max: z.coerce.number().optional(),
+    total_fees_usd: z.coerce.number().nonnegative('Total Fees must be non-negative.').default(0),
+  })
+  .refine(
+    (data) => {
+      if (data.status === 'Fechada') {
+        return !!data.exit_date;
+      }
+      return true;
+    },
+    {
+      message: 'Exit Date is required when status is "Fechada".',
+      path: ['exit_date'],
+    }
+  );
 
 
 export async function savePoolAction(prevState: any, formData: FormData): Promise<{success: boolean; message: string}> {
     try {
         const rawData = JSON.parse(formData.get('data') as string);
-
-        // Here you would perform validation with Zod, but for now we trust the client-side validation
-        // In a real app, always re-validate on the server.
-        // const validationResult = FormSchema.safeParse(rawData);
-        // if (!validationResult.success) {
-        //     return { success: false, message: 'Invalid data.' };
-        // }
-        // const poolData = validationResult.data;
         
-        // For now, let's just use the raw data and assume it's correct
-        const poolData = rawData;
+        const validationResult = FormSchema.safeParse(rawData);
+        
+        if (!validationResult.success) {
+            return { success: false, message: validationResult.error.flatten().fieldErrors.toString() };
+        }
 
-        // Normalize numbers from form
-        const processedData = {
-            ...poolData,
-            initial_usd: normalizeNumber(poolData.initial_usd),
-            current_usd: normalizeNumber(poolData.current_usd),
-            range_min: normalizeNumber(poolData.range_min),
-            range_max: normalizeNumber(poolData.range_max),
-            total_fees_usd: normalizeNumber(poolData.total_fees_usd),
-            tokens: poolData.tokens.map(token => ({
-                ...token,
-                qty: normalizeNumber(token.qty),
-                usd_value: normalizeNumber(token.usd_value)
-            }))
-        };
+        const poolData = validationResult.data;
 
-
-        await mockSavePool(processedData);
+        await savePool(poolData);
 
         revalidatePath('/dashboard');
         return { success: true, message: 'Pool saved successfully!' };

@@ -1,30 +1,24 @@
-// This can be removed if we are not using AI parsing anymore.
-// For now, we can define a manual form structure.
+import { Timestamp } from "firebase/firestore";
 
-export interface ParsedPosition {
-  name?: string;
-  exchange?: string;
-  network?: string;
-  entry_date?: string;
-  exit_date?: string;
-  status?: 'Ativa' | 'Fechada';
+export interface PoolForm {
+  name: string;
+  exchange: string;
+  network: string;
+  entry_date: Date;
+  exit_date?: Date;
+  status: 'Ativa' | 'Fechada';
   
-  tokens?: {
-    symbol?: string;
-    qty?: number;
-    usd_value?: number;
+  tokens: {
+    symbol: string;
+    qty: number;
+    usd_value: number;
   }[];
 
-  initial_usd?: number;
-  current_usd?: number;
+  initial_usd: number;
+  current_usd: number;
   range_min?: number;
   range_max?: number;
-  total_fees_usd?: number;
-
-  // These were from the AI parser, might not be needed for manual form
-  uncertainFields?: string[];
-  confidence?: number;
-  captured_at?: string;
+  total_fees_usd: number;
 }
 
 
@@ -34,8 +28,8 @@ export interface Pool {
   exchange: string;
   network: string;
   status: 'Ativa' | 'Fechada';
-  entry_date: string;
-  exit_date?: string;
+  entry_date: Date | Timestamp;
+  exit_date?: Date | Timestamp;
   
   initial_usd: number;
   current_usd: number;
@@ -43,7 +37,7 @@ export interface Pool {
   range_min?: number;
   range_max?: number;
   
-  created_at: string;
+  created_at: Date | Timestamp;
   snapshots: PoolSnapshot[];
 
   // Calculated fields
@@ -55,7 +49,7 @@ export interface Pool {
 }
 
 export type PoolSnapshot = {
-  captured_at: string;
+  captured_at: Date | Timestamp;
   position_usd: number;
   fees_total_usd: number;
   in_range: boolean;
