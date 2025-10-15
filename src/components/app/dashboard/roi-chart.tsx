@@ -24,9 +24,9 @@ export function RoiChart({ data }: { data: Pool[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>ROI by Pool</CardTitle>
+        <CardTitle>ROI por Pool</CardTitle>
         <CardDescription>
-          Return on investment from collected fees.
+          Retorno sobre o investimento a partir das taxas coletadas.
         </CardDescription>
       </CardHeader>
       <CardContent>

@@ -21,13 +21,13 @@ export function PerformanceChart({ data }: { data: { month: string; profit: numb
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Monthly Performance</CardTitle>
-        <CardDescription>Profit and Fees Collected</CardDescription>
+        <CardTitle>Performance Mensal</CardTitle>
+        <CardDescription>Lucro e Taxas Coletadas</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={{
-          profit: { label: "Profit", color: "hsl(var(--chart-1))" },
-          fees: { label: "Fees", color: "hsl(var(--chart-2))" },
+          profit: { label: "Lucro", color: "hsl(var(--chart-1))" },
+          fees: { label: "Taxas", color: "hsl(var(--chart-2))" },
         }} className="min-h-[150px] w-full">
           <BarChart accessibilityLayer data={data}>
             <CartesianGrid vertical={false} />

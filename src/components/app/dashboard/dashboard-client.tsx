@@ -6,7 +6,7 @@ import {
   TrendingUp,
   PiggyBank,
   ArrowDownUp,
-  Download,
+  PlusCircle,
 } from 'lucide-react';
 import MetricCard from './metric-card';
 import { PoolsTable } from './pools-table';
@@ -21,108 +21,64 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { PerformanceChart } from './performance-chart';
+import { useRouter } from 'next/navigation';
 
 export default function DashboardClient({
   initialData,
 }: {
   initialData: DashboardData;
 }) {
+  const router = useRouter();
   const { summaryMetrics, pools, monthlyPerformance } = initialData;
 
-  const handleExport = () => {
-    const headers = [
-      'ID',
-      'Name',
-      'Network',
-      'Version',
-      'Fee (BPS)',
-      'Status',
-      'In Range',
-      'Initial Value (USD)',
-      'Current Value (USD)',
-      'Total Fees (USD)',
-      'Profit/Loss (USD)',
-      'Profit/Loss (%)',
-      'ROI (%)',
-      'Duration (Days)',
-      'Created At',
-    ];
-    const rows = pools.map((pool) =>
-      [
-        pool.id,
-        pool.name,
-        pool.network,
-        pool.version,
-        pool.fee_bps,
-        pool.status,
-        pool.in_range,
-        pool.initial_usd,
-        pool.current_usd,
-        pool.total_fees_usd,
-        pool.profit_loss_usd,
-        pool.profit_loss_pct.toFixed(2),
-        pool.roi_pct.toFixed(2),
-        pool.duration_days,
-        pool.created_at,
-      ].join(',')
-    );
-
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...rows].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', 'pool_parser_pro_export.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleNewPool = () => {
+    router.push('/pools/new');
   };
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight">Overview</h2>
-        <Button onClick={handleExport}>
-          <Download className="mr-2 h-4 w-4" />
-          Export CSV
+        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+        <Button onClick={handleNewPool}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Nova Pool
         </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <MetricCard
-          title="Total Value"
+          title="Valor Total"
           value={formatCurrency(summaryMetrics.totalValue)}
           icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
-          description="Current value of all positions"
+          description="Valor atual de todas as posições"
         />
         <MetricCard
-          title="Profit / Loss"
+          title="Lucro / Prejuízo"
           value={formatCurrency(summaryMetrics.totalProfitLoss)}
           icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
-          description="Net profit including fees"
+          description="Lucro líquido incluindo taxas"
           valueClassName={summaryMetrics.totalProfitLoss >= 0 ? 'text-green-600' : 'text-red-600'}
         />
         <MetricCard
-          title="Total Fees Collected"
+          title="Total de Taxas"
           value={formatCurrency(summaryMetrics.totalFees)}
           icon={<PiggyBank className="h-4 w-4 text-muted-foreground" />}
-          description="Total fees earned across all pools"
+          description="Total de taxas ganhas em todas as pools"
         />
         <MetricCard
-          title="Best ROI"
+          title="Melhor ROI"
           value={formatPercent(summaryMetrics.bestRoi.value)}
           icon={<ArrowDownUp className="h-4 w-4 text-muted-foreground" />}
-          description={summaryMetrics.bestRoi.name}
+          description={summaryMetrics.bestRoi.name || 'N/A'}
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="col-span-1 lg:col-span-4">
           <CardHeader>
-            <CardTitle>Active Pools</CardTitle>
+            <CardTitle>Pools Ativas</CardTitle>
             <CardDescription>
-              A summary of your current liquidity positions.
+              Um resumo de suas posições de liquidez atuais.
             </CardDescription>
           </CardHeader>
           <CardContent>

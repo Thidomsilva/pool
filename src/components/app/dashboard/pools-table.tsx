@@ -17,9 +17,9 @@ export function PoolsTable({ pools }: { pools: Pool[] }) {
       <TableHeader>
         <TableRow>
           <TableHead>Pool</TableHead>
-          <TableHead>Network</TableHead>
-          <TableHead className="text-right">Profit/Loss</TableHead>
-          <TableHead className="text-right">Fees</TableHead>
+          <TableHead>Rede</TableHead>
+          <TableHead className="text-right">Lucro/Prejuízo</TableHead>
+          <TableHead className="text-right">Taxas</TableHead>
           <TableHead className="text-right">ROI</TableHead>
           <TableHead>Status</TableHead>
         </TableRow>
@@ -30,7 +30,7 @@ export function PoolsTable({ pools }: { pools: Pool[] }) {
             <TableCell>
               <div className="font-medium">{pool.name}</div>
               <div className="text-sm text-muted-foreground">
-                {pool.version} - {pool.fee_bps}%
+                {pool.exchange}
               </div>
             </TableCell>
             <TableCell>{pool.network}</TableCell>
@@ -51,7 +51,7 @@ export function PoolsTable({ pools }: { pools: Pool[] }) {
             <TableCell>
               <Badge variant={pool.in_range ? 'default' : 'destructive'} 
                 className={cn(pool.in_range ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600', 'text-white')}>
-                {pool.in_range ? 'In Range' : 'Out of Range'}
+                {pool.in_range ? 'No Range' : 'Fora do Range'}
               </Badge>
             </TableCell>
           </TableRow>
