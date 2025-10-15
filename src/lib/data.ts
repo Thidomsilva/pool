@@ -14,10 +14,11 @@ function calculatePoolMetrics(pool: Pool): Pool {
     const profit_loss_pct = initial_usd > 0 ? (profit_loss_usd / initial_usd) * 100 : 0;
     const roi_pct = initial_usd > 0 ? (total_fees_usd / initial_usd) * 100 : 0;
 
-    const endDate = pool.exit_date ? parseISO(pool.exit_date.toString()) : new Date();
-    const duration_days = differenceInDays(endDate, parseISO(pool.entry_date.toString()));
+    const endDate = pool.exit_date ? (pool.exit_date as Timestamp).toDate() : new Date();
+    const entryDate = (pool.entry_date as Timestamp).toDate();
+    const duration_days = differenceInDays(endDate, entryDate);
     
-    const in_range = pool.status === 'Ativa';
+    const in_range = pool.status === 'Ativa'; // This is a simplistic check. Real logic may differ.
     
     return {
         ...pool,
@@ -25,7 +26,8 @@ function calculatePoolMetrics(pool: Pool): Pool {
         profit_loss_pct,
         roi_pct,
         duration_days,
-        in_range
+        in_range,
+        resultado: profit_loss_usd // Added for the new card
     };
 }
 
@@ -73,9 +75,9 @@ export async function getPools(): Promise<Pool[]> {
         const pool: Pool = {
             id: doc.id,
             ...data,
-            entry_date: (data.entry_date as Timestamp).toDate(),
-            exit_date: data.exit_date ? (data.exit_date as Timestamp).toDate() : undefined,
-            created_at: (data.created_at as Timestamp).toDate(),
+            entry_date: data.entry_date,
+            exit_date: data.exit_date,
+            created_at: data.created_at,
             snapshots: data.snapshots || [],
         } as Pool;
         return calculatePoolMetrics(pool);

@@ -46,6 +46,7 @@ export interface Pool {
   roi_pct: number;
   duration_days: number;
   in_range: boolean;
+  resultado: number; // For PoolCard
 }
 
 export type PoolSnapshot = {
