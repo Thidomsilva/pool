@@ -1,6 +1,6 @@
 'use client';
 
-import { useFormState } from 'react-dom';
+import { useActionState } from 'react';
 import { DataImporter } from './data-importer';
 import { PoolForm } from './pool-form';
 import { processLpInput } from '@/lib/actions';
@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 
 export default function NewPoolClient() {
-  const [state, formAction] = useFormState(processLpInput, { data: null, error: null });
+  const [state, formAction] = useActionState(processLpInput, { data: null, error: null });
   const [showForm, setShowForm] = useState(false);
   const router = useRouter();
   const { toast } = useToast();

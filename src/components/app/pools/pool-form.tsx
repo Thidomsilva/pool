@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useActionState, useFormStatus } from 'react';
 import { savePoolAction } from '@/lib/actions';
 import { useEffect } from 'react';
 import { Loader2, Save, RotateCcw } from 'lucide-react';
@@ -93,7 +93,7 @@ export function PoolForm({
   onReset: () => void;
   onSaved: () => void;
 }) {
-  const [state, formAction] = useFormState(savePoolAction, {
+  const [state, formAction] = useActionState(savePoolAction, {
     success: false,
     message: '',
   });
