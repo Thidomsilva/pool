@@ -14,7 +14,8 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useActionState, useFormStatus } from 'react';
+import { useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
 import { savePoolAction } from '@/lib/actions';
 import { useEffect } from 'react';
 import { Loader2, Save, PlusCircle, Trash2, Calculator } from 'lucide-react';
