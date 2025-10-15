@@ -1,3 +1,5 @@
+'use client';
+
 import { PoolForm } from '@/components/app/pools/pool-form';
 import {
   Card,
@@ -6,9 +8,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { useRouter } from 'next/navigation';
-import { useToast } from '@/hooks/use-toast';
-import { CheckCircle } from 'lucide-react';
 
 export default function NewPoolPage() {
   return (
