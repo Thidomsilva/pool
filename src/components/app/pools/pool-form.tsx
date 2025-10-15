@@ -403,58 +403,52 @@ export function PoolForm() {
         <div className="space-y-4 rounded-lg border p-4">
             <h3 className="text-lg font-medium">Tokens Iniciais</h3>
             {fields.map((field, index) => (
-            <div key={field.id} className="grid grid-cols-1 md:grid-cols-7 gap-4 items-end">
-                <div className="md:col-span-2">
-                    <FormField
-                        control={form.control}
-                        name={`tokens.${index}.symbol`}
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Token</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="ex: ETH" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </div>
-                <div className="md:col-span-2">
-                    <FormField
-                        control={form.control}
-                        name={`tokens.${index}.qty`}
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Quantidade</FormLabel>
-                                <FormControl>
-                                    <Input type="text" placeholder="0,00" {...field} onChange={e => field.onChange(e.target.value.replace('.',','))}/>
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </div>
-                <div className="md:col-span-2">
-                     <FormField
-                        control={form.control}
-                        name={`tokens.${index}.usd_value`}
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Valor (USD)</FormLabel>
-                                <FormControl>
-                                    <Input type="text" placeholder="0,00" {...field} onChange={e => field.onChange(e.target.value.replace('.',','))}/>
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </div>
+            <div key={field.id} className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-[2fr_2fr_2fr_auto] gap-4 items-end">
+                <FormField
+                    control={form.control}
+                    name={`tokens.${index}.symbol`}
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Token</FormLabel>
+                            <FormControl>
+                                <Input placeholder="ex: ETH" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name={`tokens.${index}.qty`}
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Quantidade</FormLabel>
+                            <FormControl>
+                                <Input type="text" placeholder="0,00" {...field} onChange={e => field.onChange(e.target.value.replace('.',','))}/>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name={`tokens.${index}.usd_value`}
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Valor (USD)</FormLabel>
+                            <FormControl>
+                                <Input type="text" placeholder="0,00" {...field} onChange={e => field.onChange(e.target.value.replace('.',','))}/>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
                 <Button
                     type="button"
                     variant="outline"
                     size="icon"
                     onClick={() => remove(index)}
-                    className="self-center mb-1"
+                    className="self-center mb-1 h-10 w-10 sm:h-auto sm:w-auto"
                     >
                     <Trash2 className="h-4 w-4" />
                 </Button>
@@ -557,7 +551,7 @@ export function PoolForm() {
 
           <Dialog open={isFeeModalOpen} onOpenChange={setFeeModalOpen}>
             <DialogTrigger asChild>
-              <Button type="button" variant="outline">
+              <Button type="button" variant="outline" className="mt-4">
                 <Link className="mr-2 h-4 w-4" />
                 Adicionar Taxa
               </Button>
@@ -568,7 +562,7 @@ export function PoolForm() {
               </DialogHeader>
               <div className="space-y-4">
                 <FormItem>
-                  <FormLabel>Valor da Taxa</FormLabel>
+                  <FormLabel>Valor da Taxa (USD)</FormLabel>
                   <FormControl>
                     <Input 
                         placeholder="0,00" 
@@ -624,7 +618,8 @@ export function PoolForm() {
                 </FormItem>
               </div>
               <DialogFooter>
-                <Button type="button" onClick={handleAddFee}>Adicionar Taxa</Button>
+                <Button type="button" variant="secondary" onClick={() => setFeeModalOpen(false)}>Cancelar</Button>
+                <Button type="button" onClick={handleAddFee}>Adicionar</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>

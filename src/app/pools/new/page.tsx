@@ -14,7 +14,7 @@ export default function NewPoolPage() {
     <div className="p-4 md:p-8">
       <Card className="mx-auto max-w-4xl">
         <CardHeader>
-          <CardTitle>Criar Nova Pool</CardTitle>
+          <CardTitle>Criar Nova Posição</CardTitle>
           <CardDescription>
             Preencha manualmente os detalhes da sua nova posição de liquidez.
           </CardDescription>

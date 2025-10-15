@@ -1,4 +1,3 @@
-import { Menu, Sun, Bell } from 'lucide-react';
 import NextLink from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
@@ -17,7 +16,7 @@ export function Header() {
           <h1 className="text-xl font-bold">PoolTracker</h1>
         </NextLink>
       </div>
-       <Button onClick={handleNewPool}>
+       <Button onClick={handleNewPool} size="sm">
           Nova Pool
        </Button>
     </header>
