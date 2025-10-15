@@ -23,6 +23,7 @@ export default function DashboardClient({
   const activePools = pools.filter((pool) => pool.status === 'Ativa');
 
   return (
+<<<<<<< HEAD
     <div className="flex flex-1 flex-col gap-4 p-4 md:p-6 lg:gap-6">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
         <div className="lg:col-span-1 xl:col-span-1">
@@ -44,6 +45,12 @@ export default function DashboardClient({
                     variant="yellow"
                 />
             )}
+=======
+    <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+      <div className="flex items-center justify-between">
+        <h2 className="text-3xl font-bold tracking-tight">Overview</h2>
+      </div>
+>>>>>>> acefa534c9bbbfe0f81d1da78714b4c22e3937c8
 
             {highestRoiPool && (
                 <HighlightCard 

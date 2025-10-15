@@ -30,6 +30,19 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  headers() {
+    return Promise.resolve([
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*',
+          },
+        ],
+      },
+    ]);
+  },
 };
 
 export default nextConfig;
