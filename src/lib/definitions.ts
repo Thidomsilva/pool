@@ -1,39 +1,70 @@
-import type { ParsedPosition as AIParsedPosition } from '@/ai/flows/highlight-uncertain-fields-in-preview';
+// This can be removed if we are not using AI parsing anymore.
+// For now, we can define a manual form structure.
 
-export type ParsedPosition = AIParsedPosition;
+export interface ParsedPosition {
+  name?: string;
+  exchange?: string;
+  network?: string;
+  entry_date?: string;
+  exit_date?: string;
+  status?: 'Ativa' | 'Fechada';
+  
+  tokens?: {
+    symbol?: string;
+    qty?: number;
+    usd_value?: number;
+  }[];
+
+  initial_usd?: number;
+  current_usd?: number;
+  range_min?: number;
+  range_max?: number;
+  total_fees_usd?: number;
+
+  // These were from the AI parser, might not be needed for manual form
+  uncertainFields?: string[];
+  confidence?: number;
+  captured_at?: string;
+}
+
 
 export interface Pool {
   id: string;
   name: string;
-  pair_base: string;
-  pair_quote: string;
+  exchange: string;
   network: string;
-  version: string;
-  fee_bps: number;
+  status: 'Ativa' | 'Fechada';
+  entry_date: string;
+  exit_date?: string;
+  
   initial_usd: number;
-  created_at: string;
-  snapshots: PoolSnapshot[];
-  // Calculated fields
   current_usd: number;
   total_fees_usd: number;
+  range_min?: number;
+  range_max?: number;
+  
+  created_at: string;
+  snapshots: PoolSnapshot[];
+
+  // Calculated fields
   profit_loss_usd: number;
   profit_loss_pct: number;
   roi_pct: number;
   duration_days: number;
-  status: 'active' | 'closed';
   in_range: boolean;
 }
 
-export type PoolSnapshot = Omit<
-  ParsedPosition,
-  | 'pair_base'
-  | 'pair_quote'
-  | 'network'
-  | 'version'
-  | 'fee_bps'
-  | 'uncertainFields'
-  | 'confidence'
->;
+export type PoolSnapshot = {
+  captured_at: string;
+  position_usd: number;
+  fees_total_usd: number;
+  in_range: boolean;
+  price_min?: number;
+  price_max?: number;
+  price_market?: number;
+  apr_total_pct?: number;
+  note?: string;
+};
 
 export interface DashboardData {
   pools: Pool[];

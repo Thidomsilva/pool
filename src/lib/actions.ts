@@ -1,66 +1,57 @@
 'use server';
 
-import type { ParsedPosition } from '@/lib/definitions';
 import { revalidatePath } from 'next/cache';
 import { savePool as mockSavePool } from '@/lib/data';
 
 // This is a simplified parser, you can enhance it with more complex regex or logic
-function parseRawText(rawText: string): ParsedPosition {
-    const lines = rawText.split('\n').map(line => line.trim()).filter(line => line);
-    const data: Partial<ParsedPosition> = {};
-
-    // Example parsing logic, this can be greatly improved
-    const pairMatch = lines.find(l => l.includes('/'))?.match(/(\S+)\s*\/\s*(\S+)/);
-    if(pairMatch) {
-        data.pair_base = pairMatch[1];
-        data.pair_quote = pairMatch[2];
-    }
+function normalizeNumber(input: string | number | undefined | null): number {
+    if (input === undefined || input === null) return 0;
+    if (typeof input === 'number') return input;
     
-    // This is a very basic example. A real implementation would need more robust parsing.
-    // For now, we'll just pass what we have.
-    
-    return {
-        ...data,
-        uncertainFields: [],
-        captured_at: new Date().toISOString()
-    } as ParsedPosition;
+    // Remove thousand separators, then replace comma with dot for decimal
+    const normalized = input.replace(/\./g, '').replace(',', '.');
+    const number = parseFloat(normalized);
+    return isNaN(number) ? 0 : number;
 }
 
 
-export async function processLpInput(prevState: any, formData: FormData): Promise<{data: ParsedPosition | null; error: string | null}> {
-    const text = formData.get('text') as string;
-    const imageFile = formData.get('image') as File;
-
-    let rawText = '';
-
+export async function savePoolAction(prevState: any, formData: FormData): Promise<{success: boolean; message: string}> {
     try {
-        if (text) {
-            rawText = text;
-        } else if (imageFile && imageFile.size > 0) {
-           return { data: null, error: 'A extração de imagem foi desativada. Por favor, cole o texto manualmente.' };
-        } else {
-            return { data: null, error: 'Nenhuma entrada fornecida. Por favor, cole o texto.' };
-        }
+        const rawData = JSON.parse(formData.get('data') as string);
+
+        // Here you would perform validation with Zod, but for now we trust the client-side validation
+        // In a real app, always re-validate on the server.
+        // const validationResult = FormSchema.safeParse(rawData);
+        // if (!validationResult.success) {
+        //     return { success: false, message: 'Invalid data.' };
+        // }
+        // const poolData = validationResult.data;
         
-        const parsedData = parseRawText(rawText);
-        parsedData.uncertainFields = Object.keys(parsedData).filter(k => !parsedData[k]);
+        // For now, let's just use the raw data and assume it's correct
+        const poolData = rawData;
 
-        return { data: parsedData, error: null };
+        // Normalize numbers from form
+        const processedData = {
+            ...poolData,
+            initial_usd: normalizeNumber(poolData.initial_usd),
+            current_usd: normalizeNumber(poolData.current_usd),
+            range_min: normalizeNumber(poolData.range_min),
+            range_max: normalizeNumber(poolData.range_max),
+            total_fees_usd: normalizeNumber(poolData.total_fees_usd),
+            tokens: poolData.tokens.map(token => ({
+                ...token,
+                qty: normalizeNumber(token.qty),
+                usd_value: normalizeNumber(token.usd_value)
+            }))
+        };
 
-    } catch (error) {
-        console.error(error);
-        return { data: null, error: 'Ocorreu um erro inesperado durante o processamento. Por favor, tente novamente.'};
-    }
-}
 
+        await mockSavePool(processedData);
 
-export async function savePoolAction(prevState: any, formData: FormData) {
-    try {
-        const data = JSON.parse(formData.get('data') as string);
-        await mockSavePool(data);
         revalidatePath('/dashboard');
         return { success: true, message: 'Pool saved successfully!' };
-    } catch (e) {
-        return { success: false, message: 'Failed to save pool.' };
+    } catch (e: any) {
+        console.error(e);
+        return { success: false, message: e.message || 'Failed to save pool.' };
     }
 }
