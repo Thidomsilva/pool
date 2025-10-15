@@ -1,5 +1,11 @@
 import { Timestamp } from "firebase/firestore";
 
+export interface FeeEvent {
+  amount_usd: number;
+  description?: string;
+  occurred_at: Date;
+}
+
 export interface PoolForm {
   name: string;
   exchange: string;
@@ -19,6 +25,7 @@ export interface PoolForm {
   range_min?: number;
   range_max?: number;
   total_fees_usd: number;
+  fee_events: FeeEvent[];
 }
 
 
@@ -39,6 +46,7 @@ export interface Pool {
   
   created_at: Date | Timestamp;
   snapshots: PoolSnapshot[];
+  fee_events: (FeeEvent & { occurred_at: Timestamp })[];
 
   // Calculated fields
   profit_loss_usd: number;

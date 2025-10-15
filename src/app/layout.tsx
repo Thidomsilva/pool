@@ -1,10 +1,11 @@
+'use client';
 import type { Metadata } from 'next';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { Header } from '@/components/layout/header';
 import { Toaster } from '@/components/ui/toaster';
 
-export const metadata: Metadata = {
+const metadata: Metadata = {
   title: 'Pool Parser Pro',
   description: 'Gerencie suas posições de LP da Uniswap com facilidade.',
 };

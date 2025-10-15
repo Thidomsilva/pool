@@ -14,6 +14,7 @@ function docToPool(doc: DocumentData): Pool {
         exit_date: data.exit_date,
         created_at: data.created_at,
         snapshots: data.snapshots || [],
+        fee_events: data.fee_events || [],
     } as Pool;
     return calculatePoolMetrics(pool);
 }
@@ -134,6 +135,7 @@ export async function savePool(poolData: PoolForm) {
         total_fees_usd: poolData.total_fees_usd,
         created_at: now,
         tokens: poolData.tokens, 
+        fee_events: poolData.fee_events.map(e => ({...e, occurred_at: Timestamp.fromDate(new Date(e.occurred_at))}))
     };
 
     const docRef = await addDoc(collection(db, 'pools'), newPoolDoc);

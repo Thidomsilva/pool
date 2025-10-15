@@ -4,6 +4,13 @@ import { revalidatePath } from 'next/cache';
 import { savePool } from '@/lib/data';
 import { z } from 'zod';
 
+const FeeEventSchema = z.object({
+    amount_usd: z.coerce.number().positive('O valor da taxa deve ser positivo.'),
+    description: z.string().optional(),
+    occurred_at: z.coerce.date(),
+});
+
+
 const FormSchema = z
   .object({
     name: z.string().min(1, { message: 'O nome da pool é obrigatório.' }),
@@ -24,6 +31,7 @@ const FormSchema = z
     range_min: z.coerce.number().optional(),
     range_max: z.coerce.number().optional(),
     total_fees_usd: z.coerce.number().nonnegative('As taxas totais devem ser não-negativas.').default(0),
+    fee_events: z.array(FeeEventSchema).optional().default([]),
   })
   .refine(
     (data) => {

@@ -4,7 +4,7 @@ import type { DashboardData } from '@/lib/definitions';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import MonthlyProfit from './monthly-profit';
-import { PlusCircle, Trophy, TrendingUp, Gem, ArrowUpDown } from 'lucide-react';
+import { PlusCircle, Trophy, TrendingUp, Gem } from 'lucide-react';
 import MetricCards from './metric-cards';
 import HighlightCard from './highlight-card';
 
@@ -21,7 +21,6 @@ export default function DashboardClient({
   };
 
   const activePools = pools.filter((pool) => pool.status === 'Ativa');
-  const closedPools = pools.filter((pool) => pool.status === 'Fechada');
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">

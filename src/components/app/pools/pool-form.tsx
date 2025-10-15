@@ -14,10 +14,10 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useActionState, useEffect } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { savePoolAction } from '@/lib/actions';
-import { Loader2, Save, PlusCircle, Trash2, Calculator } from 'lucide-react';
+import { Loader2, Save, PlusCircle, Trash2, Calculator, Link } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Select,
@@ -38,6 +38,13 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { ptBR } from 'date-fns/locale';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+
+const FeeEventSchema = z.object({
+    amount_usd: z.coerce.number().positive('O valor da taxa deve ser positivo.'),
+    description: z.string().optional(),
+    occurred_at: z.date(),
+});
 
 const FormSchema = z
   .object({
@@ -59,6 +66,7 @@ const FormSchema = z
     range_min: z.coerce.number().optional(),
     range_max: z.coerce.number().optional(),
     total_fees_usd: z.coerce.number().nonnegative('As taxas totais devem ser não-negativas.').default(0),
+    fee_events: z.array(FeeEventSchema).optional().default([]),
   })
   .refine(
     (data) => {
@@ -82,13 +90,13 @@ const FormSchema = z
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending} size="lg">
+    <Button type="submit" disabled={pending} size="lg" variant="default" className="bg-primary hover:bg-primary/90 text-primary-foreground">
       {pending ? (
         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
       ) : (
         <Save className="mr-2 h-4 w-4" />
       )}
-      Salvar Pool
+      Adicionar Pool
     </Button>
   );
 }
@@ -101,6 +109,14 @@ export function PoolForm() {
 
   const { toast } = useToast();
   const router = useRouter();
+  
+  const [feeEvents, setFeeEvents] = useState<z.infer<typeof FeeEventSchema>[]>([]);
+  const [isFeeModalOpen, setFeeModalOpen] = useState(false);
+  const [currentFee, setCurrentFee] = useState<{amount_usd: string, description: string, occurred_at: Date}>({
+      amount_usd: '',
+      description: '',
+      occurred_at: new Date()
+  });
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
@@ -116,6 +132,7 @@ export function PoolForm() {
       initial_usd: 0,
       current_usd: 0,
       total_fees_usd: 0,
+      fee_events: [],
     },
   });
   
@@ -123,6 +140,12 @@ export function PoolForm() {
     control: form.control,
     name: "tokens",
   });
+
+  useEffect(() => {
+    const totalFees = feeEvents.reduce((acc, event) => acc + event.amount_usd, 0);
+    form.setValue('total_fees_usd', totalFees);
+    form.setValue('fee_events', feeEvents);
+  }, [feeEvents, form]);
 
   useEffect(() => {
     if (state.success) {
@@ -139,6 +162,24 @@ export function PoolForm() {
       });
     }
   }, [state, router, toast]);
+
+  const handleAddFee = () => {
+    const amount = parseFloat(currentFee.amount_usd.replace(',', '.'));
+    if (isNaN(amount) || amount <= 0) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'O valor da taxa deve ser um número positivo.' });
+        return;
+    }
+
+    const newFeeEvent: z.infer<typeof FeeEventSchema> = {
+        amount_usd: amount,
+        description: currentFee.description,
+        occurred_at: currentFee.occurred_at,
+    };
+
+    setFeeEvents(prev => [...prev, newFeeEvent]);
+    setCurrentFee({ amount_usd: '', description: '', occurred_at: new Date() });
+    setFeeModalOpen(false);
+  }
 
   const handleCalculateInitialValue = () => {
     const total = form.getValues('tokens').reduce((acc, token) => acc + (token.usd_value || 0), 0);
@@ -169,7 +210,8 @@ export function PoolForm() {
             current_usd: typeof rawData.current_usd === 'string' ? parseFloat(rawData.current_usd.replace(',', '.')) : rawData.current_usd,
             range_min: typeof rawData.range_min === 'string' ? parseFloat(rawData.range_min.replace(',', '.')) : rawData.range_min,
             range_max: typeof rawData.range_max === 'string' ? parseFloat(rawData.range_max.replace(',', '.')) : rawData.range_max,
-            total_fees_usd: typeof rawData.total_fees_usd === 'string' ? parseFloat(rawData.total_fees_usd.replace(',', '.')) : rawData.total_fees_usd,
+            total_fees_usd: feeEvents.reduce((acc, event) => acc + event.amount_usd, 0),
+            fee_events: feeEvents,
           }
           formData.append('data', JSON.stringify(dataWithParsedNumbers));
           formAction(formData);
@@ -439,6 +481,7 @@ export function PoolForm() {
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Valor Total Inicial (USD)</FormLabel>
+                         <FormDescription>Valor total investido inicialmente na pool</FormDescription>
                         <FormControl>
                             <div className="flex items-center gap-2">
                                 <Input type="text" placeholder="0,00" {...field} onChange={e => field.onChange(e.target.value.replace('.',','))}/>
@@ -457,6 +500,7 @@ export function PoolForm() {
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Valor Total Atual (USD)</FormLabel>
+                         <FormDescription>Valor atual total da pool</FormDescription>
                         <FormControl>
                              <Input type="text" placeholder="0,00" {...field} onChange={e => field.onChange(e.target.value.replace('.',','))}/>
                         </FormControl>
@@ -495,28 +539,114 @@ export function PoolForm() {
             </div>
         </div>
         
-        <div className="space-y-4 rounded-lg border p-4">
-            <h3 className="text-lg font-medium">Taxas da Pool</h3>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                    control={form.control}
-                    name="total_fees_usd"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Total de Taxas Coletadas (USD)</FormLabel>
-                        <FormControl>
-                             <Input type="text" placeholder="0,00" {...field} onChange={e => field.onChange(e.target.value.replace('.',','))}/>
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-            </div>
+         <div className="space-y-4 rounded-lg border p-4">
+          <h3 className="text-lg font-medium">Taxas da Pool</h3>
+           <div className="flex flex-col gap-2">
+            {feeEvents.map((event, index) => (
+                <div key={index} className="flex justify-between items-center bg-muted/50 p-2 rounded-md">
+                    <div>
+                        <p className="font-medium">{format(event.occurred_at, 'dd/MM/yyyy')} - {event.description || 'Taxa'}</p>
+                        <p className="text-green-600 font-bold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'USD' }).format(event.amount_usd)}</p>
+                    </div>
+                    <Button type="button" variant="ghost" size="icon" onClick={() => setFeeEvents(feeEvents.filter((_, i) => i !== index))}>
+                        <Trash2 className="h-4 w-4 text-destructive"/>
+                    </Button>
+                </div>
+            ))}
+           </div>
+
+          <Dialog open={isFeeModalOpen} onOpenChange={setFeeModalOpen}>
+            <DialogTrigger asChild>
+              <Button type="button" variant="outline">
+                <Link className="mr-2 h-4 w-4" />
+                Adicionar Taxa
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Adicionar Taxa</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <FormItem>
+                  <FormLabel>Valor da Taxa</FormLabel>
+                  <FormControl>
+                    <Input 
+                        placeholder="0,00" 
+                        value={currentFee.amount_usd} 
+                        onChange={(e) => setCurrentFee({...currentFee, amount_usd: e.target.value.replace('.',',')})}
+                    />
+                  </FormControl>
+                </FormItem>
+                <FormItem>
+                  <FormLabel>Descrição (opcional)</FormLabel>
+                  <FormControl>
+                    <Input 
+                        placeholder="Ex: Taxas de Julho/2023"
+                        value={currentFee.description} 
+                        onChange={(e) => setCurrentFee({...currentFee, description: e.target.value})}
+                    />
+                  </FormControl>
+                </FormItem>
+                <FormItem className="flex flex-col">
+                  <FormLabel>Data da Coleta</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant={'outline'}
+                          className={cn(
+                            'w-full pl-3 text-left font-normal',
+                            !currentFee.occurred_at && 'text-muted-foreground'
+                          )}
+                        >
+                          {currentFee.occurred_at ? (
+                            format(currentFee.occurred_at, 'PPP', { locale: ptBR })
+                          ) : (
+                            <span>Escolha uma data</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        locale={ptBR}
+                        mode="single"
+                        selected={currentFee.occurred_at}
+                        onSelect={(date) => date && setCurrentFee({...currentFee, occurred_at: date})}
+                        disabled={(date) =>
+                          date > new Date() || date < new Date('1900-01-01')
+                        }
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </FormItem>
+              </div>
+              <DialogFooter>
+                <Button type="button" onClick={handleAddFee}>Adicionar Taxa</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+           <FormField
+                control={form.control}
+                name="total_fees_usd"
+                render={({ field }) => (
+                    <FormItem className="mt-4">
+                    <FormLabel>Total de Taxas Coletadas (USD)</FormLabel>
+                    <FormControl>
+                        <Input type="text" readOnly disabled {...field} value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'USD' }).format(field.value || 0)} className="font-bold"/>
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
         </div>
 
 
-        <div className="flex justify-end">
-          <SubmitButton />
+        <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => router.back()}>Cancelar</Button>
+            <SubmitButton />
         </div>
       </form>
     </Form>
