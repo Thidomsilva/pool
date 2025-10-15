@@ -1,9 +1,7 @@
 'use client';
 
-import { useActionState } from 'react';
 import { DataImporter } from './data-importer';
 import { PoolForm } from './pool-form';
-import { processLpInput } from '@/app/actions/processLpInput';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle } from 'lucide-react';
@@ -12,32 +10,53 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 
 export default function NewPoolClient() {
-  const [state, formAction] = useActionState(processLpInput, { data: null, error: null });
+  const [parsedData, setParsedData] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (state.data) {
-      setShowForm(true);
-    }
-    if (state.error) {
+  const handleImport = async (text: string) => {
+    setLoading(true);
+    setError(null);
+    setParsedData(null);
+    try {
+      const res = await fetch('/api/processLpInput', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      const result = await res.json();
+      if (result.data) {
+        setParsedData(result.data);
+        setShowForm(true);
+      } else {
+        setError(result.error || 'Erro ao processar dados.');
+        setShowForm(false);
+      }
+    } catch (e) {
+      setError('Erro de rede ou servidor.');
       setShowForm(false);
+    } finally {
+      setLoading(false);
     }
-  }, [state]);
+  };
 
   const onFormSaved = () => {
     toast({
-        title: "Pool Saved",
-        description: "Your new pool has been added to the dashboard.",
-        action: <CheckCircle className="text-green-500" />,
+      title: 'Pool Saved',
+      description: 'Your new pool has been added to the dashboard.',
+      action: <CheckCircle className="text-green-500" />,
     });
     router.push('/dashboard');
-  }
+  };
 
   const handleReset = () => {
     setShowForm(false);
-  }
+    setParsedData(null);
+    setError(null);
+  };
 
   return (
     <div className="p-4 md:p-8">
@@ -51,16 +70,16 @@ export default function NewPoolClient() {
         </CardHeader>
         <CardContent>
           {!showForm ? (
-            <DataImporter formAction={formAction} />
+            <DataImporter onImport={handleImport} loading={loading} />
           ) : (
-            <PoolForm parsedData={state.data!} onReset={handleReset} onSaved={onFormSaved}/>
+            <PoolForm parsedData={parsedData} onReset={handleReset} onSaved={onFormSaved} />
           )}
 
-          {state.error && (
+          {error && (
             <Alert variant="destructive" className="mt-4">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{state.error}</AlertDescription>
+              <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
         </CardContent>

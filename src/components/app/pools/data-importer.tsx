@@ -27,13 +27,11 @@ function SubmitButton() {
   );
 }
 
-export function DataImporter({
-  formAction,
-}: {
-  formAction: (payload: FormData) => void;
-}) {
+
+export function DataImporter({ onImport, loading }: { onImport: (text: string) => void; loading: boolean }) {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [text, setText] = useState('');
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -52,8 +50,15 @@ export function DataImporter({
     fileInputRef.current?.click();
   };
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (text.trim()) {
+      onImport(text);
+    }
+  };
+
   return (
-    <form action={formAction} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-2">
         <Label htmlFor="text-input">Paste Position Text</Label>
         <Textarea
@@ -61,6 +66,9 @@ export function DataImporter({
           name="text"
           placeholder="ETH / USDC&#10;v4&#10;0.05%&#10;..."
           rows={8}
+          value={text}
+          onChange={e => setText(e.target.value)}
+          disabled={loading}
         />
       </div>
 
@@ -80,6 +88,7 @@ export function DataImporter({
           className="hidden"
           ref={fileInputRef}
           onChange={handleImageChange}
+          disabled={loading}
         />
         <div
           className="w-full p-4 border-2 border-dashed rounded-lg cursor-pointer flex flex-col items-center justify-center text-muted-foreground hover:bg-muted/50 transition-colors h-48"
@@ -101,7 +110,19 @@ export function DataImporter({
         </div>
       </div>
 
-      <SubmitButton />
+      <Button type="submit" disabled={loading}>
+        {loading ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Processing...
+          </>
+        ) : (
+          <>
+            <ScanText className="mr-2 h-4 w-4" />
+            Parse Data
+          </>
+        )}
+      </Button>
     </form>
   );
 }
