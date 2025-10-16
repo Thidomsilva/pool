@@ -101,15 +101,45 @@ export async function getDashboardData(): Promise<DashboardData> {
 }
 
 export async function getPools(): Promise<Pool[]> {
-    if (!db) {
-        console.warn("Firestore is not initialized. Returning empty array.");
+  if (!db) {
+    // Try Google Sheets fallback
+    const sheetId = process.env.GOOGLE_SHEETS_ID;
+    if (sheetId) {
+      try {
+        const { readPoolsFromSheet } = await import('./sheets');
+        const rows = await readPoolsFromSheet(sheetId);
+        // Convert Sheet rows to Pool shape (minimal)
+        const pools: Pool[] = rows.map(r => ({
+          id: r.id,
+          name: r.name,
+          exchange: 'Sheets',
+          network: 'Unknown',
+          status: r.status || 'Ativa',
+          entry_date: Timestamp.now(),
+          exit_date: null,
+          created_at: Timestamp.now(),
+          tokens: [],
+          initial_usd: r.initial_usd || 0,
+          current_usd: r.current_usd || 0,
+          total_fees_usd: r.total_fees_usd || 0,
+          fee_events: [],
+          snapshots: [],
+        } as Pool));
+        return pools.map(p => docToPool(p as unknown as DocumentData));
+      } catch (e) {
+        console.warn("Sheets fallback failed:", e);
         return [];
+      }
     }
-    const poolsCol = collection(db, 'pools');
-    const q = query(poolsCol, orderBy('created_at', 'desc'));
-    const poolSnapshot = await getDocs(q);
-    const poolList = poolSnapshot.docs.map(doc => docToPool(doc));
-    return poolList;
+
+    console.warn("Firestore is not initialized. Returning empty array.");
+    return [];
+  }
+  const poolsCol = collection(db, 'pools');
+  const q = query(poolsCol, orderBy('created_at', 'desc'));
+  const poolSnapshot = await getDocs(q);
+  const poolList = poolSnapshot.docs.map(doc => docToPool(doc));
+  return poolList;
 }
 
 
