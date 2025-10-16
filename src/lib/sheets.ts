@@ -64,29 +64,91 @@ export type SheetPoolRow = {
 
 export async function readPoolsFromSheet(spreadsheetId: string, range = 'Pools!A:F'): Promise<SheetPoolRow[]> {
   const client = getSheetsClient();
-  if (!client) return [];
+  if (client) {
+    try {
+      const res = await client.spreadsheets.values.get({ spreadsheetId, range });
+      const rows = res.data.values || [];
+      // Expect header row: id, name, initial_usd, current_usd, total_fees_usd, status
+      const out: SheetPoolRow[] = [];
+      for (let i = 1; i < rows.length; i++) {
+        const r = rows[i];
+        out.push({
+          id: r[0] || `row-${i}`,
+          name: r[1] || '',
+          initial_usd: parseFloat(r[2] || '0') || 0,
+          current_usd: parseFloat(r[3] || '0') || 0,
+          total_fees_usd: parseFloat(r[4] || '0') || 0,
+          status: r[5] || 'Ativa',
+        });
+      }
+      return out;
+    } catch (e) {
+      console.error('Error reading sheet via API client', e);
+      // fallthrough to public fetch
+    }
+  }
 
+  // Fallback: try to read public CSV export (no credentials)
   try {
-    const res = await client.spreadsheets.values.get({ spreadsheetId, range });
-    const rows = res.data.values || [];
-    // Expect header row: id, name, initial_usd, current_usd, total_fees_usd, status
+    const sheetName = range.split('!')[1] || 'Pools';
+    const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+    const resp = await fetch(url);
+    if (!resp.ok) {
+      console.warn('Public sheet fetch failed with status', resp.status);
+      return [];
+    }
+    const text = await resp.text();
+    const rows = parseCsv(text);
+    if (rows.length <= 1) return [];
+    const headers = rows[0].map(h => String(h).trim().toLowerCase());
     const out: SheetPoolRow[] = [];
     for (let i = 1; i < rows.length; i++) {
       const r = rows[i];
+      const get = (name: string) => {
+        const idx = headers.indexOf(name);
+        return idx >= 0 ? (r[idx] ?? '') : '';
+      };
       out.push({
-        id: r[0] || `row-${i}`,
-        name: r[1] || '',
-        initial_usd: parseFloat(r[2] || '0') || 0,
-        current_usd: parseFloat(r[3] || '0') || 0,
-        total_fees_usd: parseFloat(r[4] || '0') || 0,
-        status: r[5] || 'Ativa',
+        id: get('id') || `row-${i}`,
+        name: String(get('name') || ''),
+        initial_usd: parseFloat(String(get('initial_usd') || '0')) || 0,
+        current_usd: parseFloat(String(get('current_usd') || '0')) || 0,
+        total_fees_usd: parseFloat(String(get('total_fees_usd') || '0')) || 0,
+        status: String(get('status') || 'Ativa'),
       });
     }
     return out;
   } catch (e) {
-    console.error('Error reading sheet', e);
+    console.error('Error reading public sheet CSV', e);
     return [];
   }
+}
+
+function parseCsv(text: string): string[][] {
+  const rows: string[][] = [];
+  let cur: string[] = [];
+  let curField = '';
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { curField += '"'; i++; }
+        else { inQuotes = false; }
+      } else {
+        curField += ch;
+      }
+    } else {
+      if (ch === '"') { inQuotes = true; }
+      else if (ch === ',') { cur.push(curField); curField = ''; }
+      else if (ch === '\r') { continue; }
+      else if (ch === '\n') { cur.push(curField); rows.push(cur); cur = []; curField = ''; }
+      else { curField += ch; }
+    }
+  }
+  // push last
+  if (curField !== '' || cur.length > 0) { cur.push(curField); rows.push(cur); }
+  return rows;
 }
 
 export async function appendPoolToSheet(spreadsheetId: string, pool: Partial<SheetPoolRow>) {
