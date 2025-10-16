@@ -17,24 +17,24 @@ export default function MetricCards({ activePoolsCount, totalValue, totalProfitL
     const isProfitPct = totalProfitLossPct >= 0;
 
     return (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
-                <CardContent className="p-3 space-y-1">
+                <CardContent className="p-4">
                     <p className="text-xs text-muted-foreground">Pools Ativas</p>
                     <p className="text-2xl font-bold">{activePoolsCount}</p>
                 </CardContent>
             </Card>
             <Card>
-                <CardContent className="p-3 space-y-1">
+                <CardContent className="p-4">
                     <p className="text-xs text-muted-foreground">Valor Total</p>
                     <p className="text-2xl font-bold">{formatCurrency(totalValue)}</p>
                 </CardContent>
             </Card>
-            <Card className="col-span-2">
-                <CardContent className="p-3 space-y-1">
+            <Card className="sm:col-span-2 lg:col-span-1">
+                <CardContent className="p-4">
                      <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span>Lucro Total</span>
-                        <Info className="w-3 h-3"/>
+                        <Info className="w-4 h-4"/>
                     </div>
                     <div className="flex items-center gap-2">
                         <p className={cn("text-2xl font-bold", isProfit ? "text-green-600" : "text-red-600")}>{formatCurrency(totalProfitLoss)}</p>
@@ -42,11 +42,11 @@ export default function MetricCards({ activePoolsCount, totalValue, totalProfitL
                     </div>
                 </CardContent>
             </Card>
-            <Card className="col-span-2">
-                <CardContent className="p-3 space-y-1">
+            <Card className="sm:col-span-2 lg:col-span-1">
+                <CardContent className="p-4">
                      <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span>Percentual de Lucro</span>
-                        <Info className="w-3 h-3"/>
+                        <Info className="w-4 h-4"/>
                     </div>
                     <div className="flex items-center gap-2">
                         <p className={cn("text-2xl font-bold", isProfitPct ? "text-green-600" : "text-red-600")}>{formatPercent(totalProfitLossPct)}</p>

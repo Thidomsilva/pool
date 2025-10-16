@@ -2,16 +2,11 @@
 
 import { useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatPercent } from "@/lib/utils";
 import { Button } from '@/components/ui/button';
 import { Calendar, ChevronLeft, ChevronRight, Info, Download, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
+
 
 interface MonthlyProfitProps {
     poolsCount: number;
@@ -21,12 +16,11 @@ interface MonthlyProfitProps {
 
 export default function MonthlyProfit({ poolsCount, totalFees, totalProfitLoss }: MonthlyProfitProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
-
   const handleMonthChange = (amount: number) => {
     setCurrentDate(prev => {
-        const newDate = new Date(prev);
-        newDate.setMonth(newDate.getMonth() + amount);
-        return newDate;
+      const newDate = new Date(prev);
+      newDate.setMonth(newDate.getMonth() + amount);
+      return newDate;
     });
   }
 
@@ -38,53 +32,53 @@ export default function MonthlyProfit({ poolsCount, totalFees, totalProfitLoss }
     <Card>
       <CardContent className="p-4">
         <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-muted-foreground" />
-                <h3 className="font-bold text-md">Rentabilidade Mensal</h3>
-            </div>
-            <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" className="h-7 w-7"><Info className="w-4 h-4" /></Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7"><Download className="w-4 h-4" /></Button>
-                <Button variant="ghost" size="icon" onClick={() => handleMonthChange(-1)} className="h-7 w-7"><ChevronLeft className="w-4 h-4" /></Button>
-                <span className="text-sm font-medium w-32 text-center capitalize">{formattedDate}</span>
-                <Button variant="ghost" size="icon" onClick={() => handleMonthChange(1)} className="h-7 w-7"><ChevronRight className="w-4 h-4" /></Button>
-            </div>
+          <div className="flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-muted-foreground" />
+            <h3 className="font-bold text-md">Rentabilidade Mensal</h3>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="h-8 w-8"><Info className="w-4 h-4" /></Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8"><Download className="w-4 h-4" /></Button>
+            <Button variant="ghost" size="icon" onClick={() => handleMonthChange(-1)} className="h-8 w-8"><ChevronLeft className="w-4 h-4" /></Button>
+            <span className="text-sm font-medium w-40 text-center capitalize">{formattedDate}</span>
+            <Button variant="ghost" size="icon" onClick={() => handleMonthChange(1)} className="h-8 w-8"><ChevronRight className="w-4 h-4" /></Button>
+          </div>
         </div>
 
-        <Accordion type="single" collapsible defaultValue="item-1">
-          <AccordionItem value="item-1" className="border-none">
-            <div className="bg-muted/50 p-3 rounded-lg flex justify-between items-center">
-                <div>
-                    <p className="text-sm text-muted-foreground">Pools Montadas</p>
-                    <p className="font-bold text-lg">{poolsCount}</p>
-                </div>
-                 <AccordionTrigger className="p-0">
-                    <div className="h-10 w-10 bg-primary/20 text-primary rounded-full flex items-center justify-center">
-                        <ChevronDown className="h-5 w-5 transition-transform duration-200" />
-                    </div>
-                </AccordionTrigger>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div className="p-3 rounded-lg bg-muted/20 border border-muted/20">
+            <p className="text-sm text-muted-foreground">Pools Montadas</p>
+            <p className="font-bold text-xl mt-2">{poolsCount}</p>
+          </div>
+
+          <div className="p-3 rounded-lg bg-muted/20 border border-muted/20">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">Taxas Coletadas</p>
+              <Info className="w-4 h-4 text-muted-foreground" />
             </div>
-            
-            <AccordionContent>
-                 <div className="mt-2 space-y-2">
-                    <div className="bg-muted/50 p-3 rounded-lg space-y-1">
-                        <div className="flex items-center justify-between text-sm text-muted-foreground">
-                            <span>Taxas Coletadas</span>
-                            <Info className="w-3 h-3"/>
-                        </div>
-                        <p className="font-bold text-lg">{formatCurrency(totalFees)}</p>
-                    </div>
-                    <div className={cn("p-3 rounded-lg space-y-1", isProfit ? "bg-green-100/50" : "bg-red-100/50")}>
-                        <div className={cn("flex items-center justify-between text-sm", isProfit ? "text-green-800/80" : "text-red-800/80")} >
-                            <span>Lucro no Período</span>
-                            <Info className="w-3 h-3"/>
-                        </div>
-                        <p className={cn("font-bold text-lg", isProfit ? "text-green-700" : "text-red-700")}>{formatCurrency(totalProfitLoss)}</p>
-                    </div>
-                 </div>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
+            <p className="font-bold text-xl mt-2">{formatCurrency(totalFees)}</p>
+          </div>
+        </div>
+
+        <div className="rounded-lg overflow-hidden">
+          <div className={cn("w-full p-8 rounded-lg min-h-[180px]", isProfit ? "bg-gradient-to-r from-purple-900 via-purple-800 to-purple-700 text-white" : "bg-gradient-to-r from-red-900 via-red-800 to-red-700 text-white")}>
+            <div className="flex items-center justify-between gap-6">
+              <div className="flex-1">
+                <div className="flex items-center gap-3">
+                  <p className="text-sm opacity-90">Lucro no Período</p>
+                  <Info className="w-4 h-4 opacity-80" />
+                </div>
+                <p className="font-extrabold text-4xl lg:text-5xl leading-tight mt-3">{formatCurrency(totalProfitLoss)}</p>
+              </div>
+
+              <div className="text-right w-48">
+                <p className="text-sm opacity-90">Rendimento</p>
+                <p className={cn("font-bold text-3xl mt-2", isProfit ? "text-green-300" : "text-red-300")}>{formatPercent((totalProfitLoss !== 0 ? (totalProfitLoss / Math.max(1, totalFees)) * 100 : 0))}</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
