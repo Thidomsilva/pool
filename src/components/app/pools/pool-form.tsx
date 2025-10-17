@@ -39,9 +39,9 @@ import { ptBR } from 'date-fns/locale';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 
 const FeeEventSchema = z.object({
-    amount_usd: z.coerce.number().positive('O valor da taxa deve ser positivo.'),
-    description: z.string().optional(),
-    occurred_at: z.date(),
+  amount_usd: z.preprocess((v) => parseBrNumber(v as any), z.number().positive('O valor da taxa deve ser positivo.')),
+  description: z.string().optional(),
+  occurred_at: z.date(),
 });
 
 const FormSchema = z
@@ -55,15 +55,15 @@ const FormSchema = z
     tokens: z.array(
       z.object({
         symbol: z.string().min(1, 'O símbolo é obrigatório.'),
-        qty: z.coerce.number().positive('A quantidade deve ser positiva.'),
-        usd_value: z.coerce.number().positive('O valor deve ser positivo.'),
+        qty: z.preprocess((v) => parseBrNumber(v as any), z.number().positive('A quantidade deve ser positiva.')),
+        usd_value: z.preprocess((v) => parseBrNumber(v as any), z.number().positive('O valor deve ser positivo.')),
       })
     ).min(1, 'Pelo menos um token é obrigatório.'),
-    initial_usd: z.coerce.number().positive('O valor inicial deve ser positivo.'),
-    current_usd: z.coerce.number().nonnegative('O valor atual deve ser não-negativo.'),
-    range_min: z.coerce.number().optional(),
-    range_max: z.coerce.number().optional(),
-    total_fees_usd: z.coerce.number().nonnegative('As taxas totais devem ser não-negativas.').default(0),
+    initial_usd: z.preprocess((v) => parseBrNumber(v as any), z.number().positive('O valor inicial deve ser positivo.')),
+    current_usd: z.preprocess((v) => parseBrNumber(v as any), z.number().nonnegative('O valor atual deve ser não-negativo.')),
+    range_min: z.preprocess((v) => parseBrNumber(v as any), z.number().optional()),
+    range_max: z.preprocess((v) => parseBrNumber(v as any), z.number().optional()),
+    total_fees_usd: z.preprocess((v) => parseBrNumber(v as any), z.number().nonnegative('As taxas totais devem ser não-negativas.')).default(0),
     fee_events: z.array(FeeEventSchema).optional().default([]),
   })
   .refine(
