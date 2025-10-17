@@ -136,10 +136,53 @@ export function PoolForm() {
     },
   });
   
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
     name: "tokens",
   });
+
+  // watch name and tokens for auto-populate and auto-sum
+  const nameValue = form.watch('name');
+  const tokensValues = form.watch('tokens');
+
+  // Auto-populate tokens symbols when user types a paired name like "ETH/USDC"
+  useEffect(() => {
+    try {
+      const name = String(nameValue || '').trim();
+      if (!name || !name.includes('/')) return;
+      const symbols = name.split('/').map(s => s.trim()).filter(Boolean);
+      if (!symbols.length) return;
+      const current = form.getValues('tokens') || [];
+      const newTokens = symbols.map((sym, i) => {
+        // prefer existing token with same symbol, else by index, else empty template
+        const existingBySymbol = current.find((t: any) => t && t.symbol && String(t.symbol).toLowerCase() === sym.toLowerCase());
+        const existingByIndex = current[i];
+        const base = existingBySymbol || existingByIndex || { symbol: '', qty: 0, usd_value: 0 };
+        return { ...base, symbol: sym };
+      });
+  // use replace so the useFieldArray `fields` reflects the new items
+  replace(newTokens);
+    } catch (e) {
+      // ignore
+    }
+  }, [nameValue, form]);
+
+  // Auto-sum token usd_value into initial_usd whenever tokens change
+  useEffect(() => {
+    try {
+      const tokens = form.getValues('tokens') || [];
+      const total = tokens.reduce((acc: number, t: any) => {
+        const raw = t?.usd_value ?? 0;
+        const n = typeof raw === 'string' ? parseFloat(String(raw).replace(',', '.')) : Number(raw);
+        return acc + (isNaN(n) ? 0 : n);
+      }, 0);
+  form.setValue('initial_usd', total, { shouldValidate: true });
+  // also set current_usd by default to the same total (user can override)
+  form.setValue('current_usd', total, { shouldValidate: true });
+    } catch (e) {
+      // ignore
+    }
+  }, [tokensValues, form]);
 
   useEffect(() => {
     const totalFees = feeEvents.reduce((acc, event) => acc + event.amount_usd, 0);
