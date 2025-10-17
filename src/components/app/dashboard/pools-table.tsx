@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableFooter } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, parseBrNumber } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 import type { Pool } from '@/lib/definitions';
 
 export default function PoolsTable({ pools }: { pools: Pool[] }) {
@@ -20,19 +21,26 @@ export default function PoolsTable({ pools }: { pools: Pool[] }) {
     setLocalValue('');
   };
 
+  const router = useRouter();
+  const [isSaving, setIsSaving] = useState(false);
+
   const saveValue = async (id: string) => {
+    if (isSaving) return;
+    setIsSaving(true);
     try {
-      const value = Number(String(localValue).replace(',', '.')) || 0;
+      const value = parseBrNumber(localValue);
       const res = await fetch('/api/sheets/updatePool', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, updates: { current_usd: value } }),
       });
       if (!res.ok) throw new Error('Failed to update');
-      // Optionally show toast here
+      // refresh the page/server components to reflect changes
+      try { router.refresh(); } catch (e) { /* ignore */ }
     } catch (e) {
       console.error('Failed to persist updated current_usd', e);
     } finally {
+      setIsSaving(false);
       setEditingId(null);
     }
   };

@@ -223,6 +223,7 @@ export function PoolForm() {
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(async (rawData) => {
+          if (isSubmitting) return; // guard against double submissions
           setIsSubmitting(true);
           try {
             const dataWithParsedNumbers = {
@@ -265,7 +266,7 @@ export function PoolForm() {
               // fallback to client navigation
               router.push(`/dashboard?ts=${Date.now()}`);
             }
-          } catch (err: any) {
+            } catch (err: any) {
             toast({ variant: 'destructive', title: 'Erro', description: err?.message || 'Falha ao salvar a pool.' });
           } finally {
             setIsSubmitting(false);
@@ -696,7 +697,7 @@ export function PoolForm() {
 
         <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => router.back()}>Cancelar</Button>
-            <SubmitButton />
+            <SubmitButton pending={isSubmitting} />
         </div>
       </form>
     </Form>
