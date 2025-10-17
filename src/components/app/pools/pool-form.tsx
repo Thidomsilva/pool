@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useEffect, useState } from 'react';
 import { Loader2, Save, PlusCircle, Trash2, Calculator, Link } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, parseBrNumber } from '@/lib/utils';
 import {
   Select,
   SelectContent,
@@ -161,18 +161,20 @@ export function PoolForm() {
     }
   }, [nameValue, form]);
 
-  // Auto-sum token usd_value into initial_usd whenever tokens change
+  // Auto-sum tokens into initial_usd whenever tokens change
   useEffect(() => {
     try {
       const tokens = form.getValues('tokens') || [];
       const total = tokens.reduce((acc: number, t: any) => {
-        const raw = t?.usd_value ?? 0;
-        const n = typeof raw === 'string' ? parseFloat(String(raw).replace(',', '.')) : Number(raw);
-        return acc + (isNaN(n) ? 0 : n);
+        const qty = parseBrNumber(t?.qty);
+        const usd = parseBrNumber(t?.usd_value);
+        // prefer qty * usd if qty > 0, else just usd
+        const value = qty > 0 ? qty * usd : usd;
+        return acc + value;
       }, 0);
-  form.setValue('initial_usd', total, { shouldValidate: true });
-  // also set current_usd by default to the same total (user can override)
-  form.setValue('current_usd', total, { shouldValidate: true });
+      form.setValue('initial_usd', total, { shouldValidate: true });
+      // also set current_usd by default to the same total (user can override)
+      form.setValue('current_usd', total, { shouldValidate: true });
     } catch (e) {
       // ignore
     }
@@ -227,13 +229,13 @@ export function PoolForm() {
               ...rawData,
               tokens: (rawData.tokens || []).map((token: any) => ({
                 ...token,
-                qty: typeof token.qty === 'string' ? parseFloat(token.qty.replace(',', '.')) : token.qty,
-                usd_value: typeof token.usd_value === 'string' ? parseFloat(token.usd_value.replace(',', '.')) : token.usd_value,
+                qty: parseBrNumber(token.qty),
+                usd_value: parseBrNumber(token.usd_value),
               })),
-              initial_usd: typeof rawData.initial_usd === 'string' ? parseFloat(rawData.initial_usd.replace(',', '.')) : rawData.initial_usd,
-              current_usd: typeof rawData.current_usd === 'string' ? parseFloat(rawData.current_usd.replace(',', '.')) : rawData.current_usd,
-              range_min: typeof rawData.range_min === 'string' ? parseFloat(rawData.range_min.replace(',', '.')) : rawData.range_min,
-              range_max: typeof rawData.range_max === 'string' ? parseFloat(rawData.range_max.replace(',', '.')) : rawData.range_max,
+              initial_usd: parseBrNumber(rawData.initial_usd),
+              current_usd: parseBrNumber(rawData.current_usd),
+              range_min: parseBrNumber(rawData.range_min),
+              range_max: parseBrNumber(rawData.range_max),
               total_fees_usd: feeEvents.reduce((acc, event) => acc + event.amount_usd, 0),
               fee_events: feeEvents,
             };

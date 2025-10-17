@@ -20,11 +20,21 @@ export default function PoolsTable({ pools }: { pools: Pool[] }) {
     setLocalValue('');
   };
 
-  const saveValue = (id: string) => {
-    // Aqui apenas fazemos o callback local. Persistência será implementada pelo servidor/Firebase.
-    // Podemos chamar uma API para atualizar o pool por id.
-    console.log('Salvar valor atual para', id, localValue);
-    setEditingId(null);
+  const saveValue = async (id: string) => {
+    try {
+      const value = Number(String(localValue).replace(',', '.')) || 0;
+      const res = await fetch('/api/sheets/updatePool', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, updates: { current_usd: value } }),
+      });
+      if (!res.ok) throw new Error('Failed to update');
+      // Optionally show toast here
+    } catch (e) {
+      console.error('Failed to persist updated current_usd', e);
+    } finally {
+      setEditingId(null);
+    }
   };
 
   return (
@@ -43,7 +53,20 @@ export default function PoolsTable({ pools }: { pools: Pool[] }) {
             <TableRow key={p.id}>
               <TableCell>{p.name}</TableCell>
               <TableCell className="text-right">{formatCurrency(p.initial_usd)}</TableCell>
-              <TableCell className="text-right">{formatCurrency(p.current_usd)}</TableCell>
+              <TableCell className="text-right">
+                {editingId === p.id ? (
+                  <div className="flex items-center justify-end gap-2">
+                    <input className="input h-8 rounded border px-2 text-right" value={localValue} onChange={(e) => setLocalValue(e.target.value)} />
+                    <Button size="sm" onClick={() => saveValue(p.id)}>Salvar</Button>
+                    <Button size="sm" variant="ghost" onClick={cancelEdit}>Cancelar</Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-end gap-2">
+                    <span>{formatCurrency(p.current_usd)}</span>
+                    <Button size="sm" onClick={() => startEdit(p.id, p.current_usd)}>Editar</Button>
+                  </div>
+                )}
+              </TableCell>
               <TableCell className="text-right">{p.status}</TableCell>
             </TableRow>
           ))}
