@@ -204,3 +204,46 @@ export async function appendPoolToSheet(spreadsheetId: string, pool: Partial<She
     return false;
   }
 }
+
+export async function updatePoolInSheet(spreadsheetId: string, id: string, updates: Partial<SheetPoolRow>) {
+  const client = getSheetsClient();
+  if (!client) throw new Error('Sheets client not initialized');
+
+  try {
+    const range = await resolvePoolsRange(client as any, spreadsheetId);
+    const res = await client.spreadsheets.values.get({ spreadsheetId, range });
+    const rows = res.data.values || [];
+    // find row index where first column equals id
+    let foundIndex = -1;
+    for (let i = 1; i < rows.length; i++) {
+      const r = rows[i];
+      if ((r[0] || '') === id) { foundIndex = i; break; }
+    }
+    if (foundIndex === -1) return false;
+    const sheetBase = range.split('!')[0]; // e.g. 'Sheet1'
+    const rowNumber = foundIndex + 1; // sheet rows are 1-indexed and header is row 1
+
+    const cur = rows[foundIndex] || [];
+    const updatedRow = [
+      cur[0] || id,
+      updates.name ?? cur[1] ?? '',
+      updates.initial_usd !== undefined ? String(updates.initial_usd) : (cur[2] ?? '0'),
+      updates.current_usd !== undefined ? String(updates.current_usd) : (cur[3] ?? '0'),
+      updates.total_fees_usd !== undefined ? String(updates.total_fees_usd) : (cur[4] ?? '0'),
+      updates.status ?? cur[5] ?? 'Ativa',
+    ];
+
+    const updateRange = `${sheetBase}!A${rowNumber}:F${rowNumber}`;
+    await client.spreadsheets.values.update({
+      spreadsheetId,
+      range: updateRange,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: { values: [updatedRow] },
+    });
+
+    return true;
+  } catch (e) {
+    console.error('Error updating sheet row', e);
+    return false;
+  }
+}
