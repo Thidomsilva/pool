@@ -62,10 +62,36 @@ export type SheetPoolRow = {
   status: string;
 };
 
-export async function readPoolsFromSheet(spreadsheetId: string, range = 'Pools!A:F'): Promise<SheetPoolRow[]> {
+function quoteSheetTitle(title: string) {
+  // If title contains spaces or special chars, wrap in single quotes and escape existing single quotes
+  if (/[^A-Za-z0-9_]/.test(title)) {
+    return `'${title.replace(/'/g, "''")}'`;
+  }
+  return title;
+}
+
+async function resolvePoolsRange(client: SheetsClient, spreadsheetId: string) {
+  try {
+    const meta = await client.spreadsheets.get({ spreadsheetId });
+    const sheets = meta.data.sheets || [];
+    let title = 'Pools';
+    // try to find a sheet named Pools (case-insensitive)
+    const found = sheets.find(s => String(s.properties?.title || '').toLowerCase() === 'pools');
+    if (found) title = found.properties!.title!;
+    else if (sheets.length > 0) title = sheets[0].properties!.title!;
+    const quoted = quoteSheetTitle(title);
+    return `${quoted}!A:F`;
+  } catch (e) {
+    // fallback to default
+    return 'Pools!A:F';
+  }
+}
+
+export async function readPoolsFromSheet(spreadsheetId: string, rangeIn = ''): Promise<SheetPoolRow[]> {
   const client = getSheetsClient();
   if (client) {
     try {
+      const range = rangeIn || (await resolvePoolsRange(client, spreadsheetId));
       const res = await client.spreadsheets.values.get({ spreadsheetId, range });
       const rows = res.data.values || [];
       // Expect header row: id, name, initial_usd, current_usd, total_fees_usd, status
@@ -90,7 +116,7 @@ export async function readPoolsFromSheet(spreadsheetId: string, range = 'Pools!A
 
   // Fallback: try to read public CSV export (no credentials)
   try {
-    const sheetName = range.split('!')[1] || 'Pools';
+    const sheetName = rangeIn ? rangeIn.split('!')[1] : 'Pools';
     const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
     const resp = await fetch(url);
     if (!resp.ok) {
@@ -165,9 +191,10 @@ export async function appendPoolToSheet(spreadsheetId: string, pool: Partial<She
   ]];
 
   try {
+    const range = await resolvePoolsRange(client as any, spreadsheetId);
     await client.spreadsheets.values.append({
       spreadsheetId,
-      range: 'Pools!A:F',
+      range,
       valueInputOption: 'USER_ENTERED',
       requestBody: { values },
     });

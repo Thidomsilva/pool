@@ -3,6 +3,7 @@
 import type { DashboardData } from '@/lib/definitions';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import MonthlyProfit from './monthly-profit';
 import { PlusCircle, Trophy, TrendingUp, Gem } from 'lucide-react';
 import MetricCards from './metric-cards';
@@ -15,6 +16,14 @@ export default function DashboardClient({
   initialData: DashboardData;
 }) {
   const router = useRouter();
+  useEffect(() => {
+    try {
+      // Ensure server components are refreshed so latest pools (Sheets) are shown
+      router.refresh();
+    } catch (e) {
+      // ignore
+    }
+  }, [router]);
   const { pools, summaryMetrics, monthlyPerformance, bestPool, highestRoiPool, highestFeesPool } = initialData;
 
   const handleNewPool = () => {

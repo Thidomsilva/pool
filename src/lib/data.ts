@@ -125,7 +125,9 @@ export async function getPools(): Promise<Pool[]> {
           fee_events: [],
           snapshots: [],
         } as Pool));
-        return pools.map(p => docToPool(p as unknown as DocumentData));
+        // docToPool expects a Firestore Document with .data(); for sheet-derived plain objects
+        // call calculatePoolMetrics directly to compute derived fields.
+        return pools.map(p => calculatePoolMetrics(p));
       } catch (e) {
         console.warn("Sheets fallback failed:", e);
         return [];

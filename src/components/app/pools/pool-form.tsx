@@ -14,9 +14,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useActionState, useEffect, useState } from 'react';
-import { useFormStatus } from 'react-dom';
-import { savePoolAction } from '@/lib/actions';
+import { useEffect, useState } from 'react';
 import { Loader2, Save, PlusCircle, Trash2, Calculator, Link } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -87,8 +85,7 @@ const FormSchema = z
     return true;
   });
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
+function SubmitButton({ pending }: { pending?: boolean }) {
   return (
     <Button type="submit" disabled={pending} size="lg" variant="default" className="bg-primary hover:bg-primary/90 text-primary-foreground">
       {pending ? (
@@ -102,11 +99,6 @@ function SubmitButton() {
 }
 
 export function PoolForm() {
-  const [state, formAction] = useActionState(savePoolAction, {
-    success: false,
-    message: '',
-  });
-
   const { toast } = useToast();
   const router = useRouter();
   
@@ -131,6 +123,8 @@ export function PoolForm() {
       ],
       initial_usd: 0,
       current_usd: 0,
+  range_min: undefined,
+  range_max: undefined,
       total_fees_usd: 0,
       fee_events: [],
     },
@@ -190,21 +184,7 @@ export function PoolForm() {
     form.setValue('fee_events', feeEvents);
   }, [feeEvents, form]);
 
-  useEffect(() => {
-    if (state.success) {
-      toast({
-        title: 'Pool Salva!',
-        description: 'Sua nova pool foi adicionada ao dashboard.',
-      });
-      router.push('/dashboard');
-    } else if (state.message) {
-      toast({
-        variant: 'destructive',
-        title: 'Erro',
-        description: state.message,
-      });
-    }
-  }, [state, router, toast]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleAddFee = () => {
     const amount = parseFloat(currentFee.amount_usd.replace(',', '.'));
@@ -240,25 +220,55 @@ export function PoolForm() {
   return (
     <Form {...form}>
       <form
-        action={(formData) => {
-          const rawData = form.getValues();
-          const dataWithParsedNumbers = {
-            ...rawData,
-            tokens: rawData.tokens.map(token => ({
+        onSubmit={form.handleSubmit(async (rawData) => {
+          setIsSubmitting(true);
+          try {
+            const dataWithParsedNumbers = {
+              ...rawData,
+              tokens: (rawData.tokens || []).map((token: any) => ({
                 ...token,
                 qty: typeof token.qty === 'string' ? parseFloat(token.qty.replace(',', '.')) : token.qty,
                 usd_value: typeof token.usd_value === 'string' ? parseFloat(token.usd_value.replace(',', '.')) : token.usd_value,
-            })),
-            initial_usd: typeof rawData.initial_usd === 'string' ? parseFloat(rawData.initial_usd.replace(',', '.')) : rawData.initial_usd,
-            current_usd: typeof rawData.current_usd === 'string' ? parseFloat(rawData.current_usd.replace(',', '.')) : rawData.current_usd,
-            range_min: typeof rawData.range_min === 'string' ? parseFloat(rawData.range_min.replace(',', '.')) : rawData.range_min,
-            range_max: typeof rawData.range_max === 'string' ? parseFloat(rawData.range_max.replace(',', '.')) : rawData.range_max,
-            total_fees_usd: feeEvents.reduce((acc, event) => acc + event.amount_usd, 0),
-            fee_events: feeEvents,
+              })),
+              initial_usd: typeof rawData.initial_usd === 'string' ? parseFloat(rawData.initial_usd.replace(',', '.')) : rawData.initial_usd,
+              current_usd: typeof rawData.current_usd === 'string' ? parseFloat(rawData.current_usd.replace(',', '.')) : rawData.current_usd,
+              range_min: typeof rawData.range_min === 'string' ? parseFloat(rawData.range_min.replace(',', '.')) : rawData.range_min,
+              range_max: typeof rawData.range_max === 'string' ? parseFloat(rawData.range_max.replace(',', '.')) : rawData.range_max,
+              total_fees_usd: feeEvents.reduce((acc, event) => acc + event.amount_usd, 0),
+              fee_events: feeEvents,
+            };
+
+            const res = await fetch('/api/sheets/savePool', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(dataWithParsedNumbers),
+            });
+
+            if (!res.ok) {
+              const payload = await res.json().catch(() => ({ error: 'Unknown error' }));
+              toast({ variant: 'destructive', title: 'Erro', description: payload?.error || 'Falha ao salvar a pool.' });
+              setIsSubmitting(false);
+              return;
+            }
+
+            toast({ title: 'Pool Salva!', description: 'Sua nova pool foi adicionada ao dashboard.' });
+            try {
+              // force a full reload of the dashboard page with a cache-busting query so the server
+              // re-runs the Server Components and reads the latest data from the sheet.
+              if (typeof window !== 'undefined') {
+                window.location.assign(`/dashboard?ts=${Date.now()}`);
+                return;
+              }
+            } catch (e) {
+              // fallback to client navigation
+              router.push(`/dashboard?ts=${Date.now()}`);
+            }
+          } catch (err: any) {
+            toast({ variant: 'destructive', title: 'Erro', description: err?.message || 'Falha ao salvar a pool.' });
+          } finally {
+            setIsSubmitting(false);
           }
-          formData.append('data', JSON.stringify(dataWithParsedNumbers));
-          formAction(formData);
-        }}
+        })}
         className="space-y-8"
       >
         <div className="space-y-4 rounded-lg border p-4">
@@ -466,9 +476,9 @@ export function PoolForm() {
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel>Quantidade</FormLabel>
-                            <FormControl>
-                                <Input type="text" placeholder="0,00" {...field} onChange={e => field.onChange(e.target.value.replace('.',','))}/>
-                            </FormControl>
+              <FormControl>
+                <Input type="text" placeholder="0,00" value={field.value ?? ''} onChange={e => field.onChange(e.target.value.replace('.',','))} />
+              </FormControl>
                             <FormMessage />
                         </FormItem>
                     )}
@@ -479,9 +489,9 @@ export function PoolForm() {
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel>Valor (USD)</FormLabel>
-                            <FormControl>
-                                <Input type="text" placeholder="0,00" {...field} onChange={e => field.onChange(e.target.value.replace('.',','))}/>
-                            </FormControl>
+              <FormControl>
+                <Input type="text" placeholder="0,00" value={field.value ?? ''} onChange={e => field.onChange(e.target.value.replace('.',','))} />
+              </FormControl>
                             <FormMessage />
                         </FormItem>
                     )}
@@ -554,7 +564,7 @@ export function PoolForm() {
                         <FormItem>
                         <FormLabel>Range Mínimo</FormLabel>
                         <FormControl>
-                             <Input type="text" placeholder="ex: 3800,00" {...field} onChange={e => field.onChange(e.target.value.replace('.',','))}/>
+                             <Input type="text" placeholder="ex: 3800,00" value={String(field.value ?? '')} onChange={e => field.onChange(e.target.value.replace('.',','))} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -567,7 +577,7 @@ export function PoolForm() {
                         <FormItem>
                         <FormLabel>Range Máximo</FormLabel>
                         <FormControl>
-                             <Input type="text" placeholder="ex: 4367,00" {...field} onChange={e => field.onChange(e.target.value.replace('.',','))}/>
+                             <Input type="text" placeholder="ex: 4367,00" value={String(field.value ?? '')} onChange={e => field.onChange(e.target.value.replace('.',','))} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
