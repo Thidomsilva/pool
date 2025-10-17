@@ -101,7 +101,9 @@ export async function getDashboardData(): Promise<DashboardData> {
 }
 
 export async function getPools(): Promise<Pool[]> {
-  if (!db) {
+  // If USE_SHEETS_ONLY is set, prefer Google Sheets fallback even when Firestore is configured.
+  const forceSheets = process.env.USE_SHEETS_ONLY === 'true';
+  if (!db || forceSheets) {
     // Try Google Sheets fallback
     const sheetId = process.env.GOOGLE_SHEETS_ID;
     if (sheetId) {
